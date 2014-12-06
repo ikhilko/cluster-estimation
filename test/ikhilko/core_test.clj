@@ -1,4 +1,4 @@
-(ns lab-first.core-test
+(ns ikhilko.core-test
   (:require [clojure.test :refer :all]
             [lab-first.core :refer :all]))
 

@@ -1,4 +1,4 @@
-(ns lab-first.core)
+(ns ikhilko.core)
 
 (defn foo
   "I don't do a whole lot."
