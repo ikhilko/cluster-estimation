@@ -16,7 +16,7 @@
 (defn- line->point
   [line]
   (->> (str/split line #",")
-       (map str/trim)
+       (pmap str/trim)
        (butlast)
        (hash-map :values)))
 
@@ -25,7 +25,7 @@
   [filename]
   (->> (io/reader filename)
        (line-seq)
-       (map line->point)))
+       (pmap line->point)))
 
 ; check, is file exist?
 (defn- file-exist? [filename]
@@ -34,27 +34,32 @@
 ; helper throwing Error with "message" if condition falsy
 (defn- if-false-throw-error
   [condition message]
-  (if-not condition (throw (Exception. message)))
+  (if-not condition (throw (IllegalArgumentException. message)))
   condition)
 
 ; check arguments and throw exception if some check doen't valid
-(defn- arguments-valid?
+(defn- check-argumets
   [distance-type filename]
   (every? true?
           (map #(apply if-false-throw-error %)
                [[(some? distance-type) "Distance-type must be provided as first argument"]
                 [(some? filename) "Distance-type must be provided as second argument"]
                 [(contains? distance-types distance-type) (str "Unknown distance type: \"" distance-type "\", please use "
-                                                               (->> distance-types (map #(str "\"" % "\"")) (str/join " or ")))]
+                                                               (->> distance-types (pmap #(str "\"" % "\"")) (str/join " or ")))]
                 [(file-exist? filename) (str "File with name " filename " doesn't exist!")]])))
 
+; entry point
 (defn -main
   [distance-type filename]
-  {:pre [(arguments-valid? distance-type filename)]}
-  (println "Distance type: " distance-type)
-  (println "Source file: " filename)
-  (->> (file->points filename)
-       (map println)
-       (doall)))
+  (try
+    (do
+      (check-argumets distance-type filename)               ; if invalid will throw an IllegalArgumentException that catched below
+      (println "Distance type: " distance-type)
+      (println "Source file: " filename)
+      (->> (file->points filename)
+           (map println)
+           (doall)))
+    (catch IllegalArgumentException e (->> e (.getMessage) (println "Invalid argument: "))))
+  (shutdown-agents))
 
 ;(-main "euclidean" "./samples/glass.txt")
