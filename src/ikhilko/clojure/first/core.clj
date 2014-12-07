@@ -12,9 +12,20 @@
 (def ^:private betta (/ 4 (Math/pow r-b 2)))
 (def ^:private distance-types #{"euclidean" "hamming"})
 
-(defn- read-file-lines
+; string to hash-map (excluded last value in line)
+(defn- line->point
+  [line]
+  (->> (str/split line #",")
+       (map str/trim)
+       (butlast)
+       (hash-map :values)))
+
+; read file to list of hash-maps
+(defn- file->points
   [filename]
-  (println "Opening file: " filename))
+  (->> (io/reader filename)
+       (line-seq)
+       (map line->point)))
 
 ; check, is file exist?
 (defn- file-exist? [filename]
@@ -42,6 +53,8 @@
   {:pre [(arguments-valid? distance-type filename)]}
   (println "Distance type: " distance-type)
   (println "Source file: " filename)
-  (read-file-lines filename))
+  (->> (file->points filename)
+       (map println)
+       (doall)))
 
 ;(-main "euclidean" "./samples/glass.txt")
