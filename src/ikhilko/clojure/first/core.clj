@@ -39,7 +39,8 @@
 
 (defn- revise-points-potentials
   [distance-func kernel points]
-  (pmap (partial revise-point-potential distance-func kernel) points))
+  (->> (pmap (partial revise-point-potential distance-func kernel) points)
+       (sort-by :potential >)))
 
 (defn- find-max-potential-point
   [points]
@@ -62,11 +63,10 @@
                   first-kernel
                   [first-kernel])))
   ([distance-func points first-kernel kernels]
-    (println "Kernels: \n\n\n" kernels)
     (let [revised-points (revise-points-potentials distance-func (last kernels) points)
           next-kernel (find-max-potential-point revised-points)
-          first-potential (:potential next-kernel)
-          next-potential (:potential first-kernel)]
+          first-potential (:potential first-kernel)
+          next-potential (:potential next-kernel)]
       (if (> next-potential (* first-potential e_max))
         (recur distance-func
                revised-points
@@ -89,12 +89,12 @@
 
 (defn- euclidean-distance
   [point1 point2]
-  (->> (map (comp (fn [x] (* x x)) -) point1 point2)
+  (->> (pmap (comp (fn [x] (* x x)) -) point1 point2)
        (reduce + 0)))
 
 (defn- hamming-distance
   [point1 point2]
-  (->> (map not= point1 point2)
+  (->> (pmap not= point1 point2)
        (filter true?)
        (count)))
 
@@ -144,16 +144,16 @@
 (defn -main
   [distance-type filename]
   (try
-    (do
-      (check-argumets distance-type filename)               ; if invalid will throw an IllegalArgumentException that catched below
-      (println "Distance type: " distance-type)
-      (println "Source file: " filename)
-      (let [points (file->points filename)
-            distance-func (get-distance-func distance-type)]
-        (clusterize distance-func points)))
-    ;(catch IllegalArgumentException e (->> e (.getMessage) (println "Invalid argument: ")))
-    )
-  (shutdown-agents))
+    (do (check-argumets distance-type filename)             ; if invalid will throw an IllegalArgumentException that catched below
+        (println "Distance type: " distance-type)
+        (println "Source file: " filename)
+        (let [points (file->points filename)
+              distance-func (get-distance-func distance-type)]
+          (->> (clusterize distance-func points)
+               (map println)
+               (dorun))))
+    (catch IllegalArgumentException e (->> e (.getMessage) (println "Invalid argument: ")))
+    (finally (shutdown-agents))))
 
 ;(->> (file->points filename)
 ;           (map println)
