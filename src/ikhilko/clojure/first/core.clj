@@ -64,7 +64,7 @@
                   [first-kernel])))
   ([distance-func points first-kernel kernels]
     (let [revised-points (revise-points-potentials distance-func (last kernels) points)
-          next-kernel (find-max-potential-point revised-points)
+          next-kernel (first revised-points)
           first-potential (:potential first-kernel)
           next-potential (:potential next-kernel)]
       (if (> next-potential (* first-potential e_max))
@@ -82,10 +82,11 @@
                    revised-points
                    first-kernel
                    (conj kernels next-kernel))
-            (recur distance-func
-                   (conj (rest revised-points) (assoc next-kernel :potential 0))
-                   first-kernel
-                   (conj kernels (find-max-potential-point revised-points)))))))))
+            (let [revised-points (rest revised-points)]
+              (recur distance-func
+                     (conj revised-points (assoc next-kernel :potential 0))
+                     first-kernel
+                     (conj kernels (find-max-potential-point revised-points))))))))))
 
 (defn- euclidean-distance
   [point1 point2]
@@ -107,8 +108,9 @@
 (defn- line->point
   [line]
   (->> (str/split line #",")
-       (pmap #(Double/parseDouble (str/trim %)))
+       (pmap str/trim)
        (butlast)
+       (pmap #(Double/parseDouble %))
        (vec)
        (hash-map :vals)))
 
@@ -154,9 +156,5 @@
                (dorun))))
     (catch IllegalArgumentException e (->> e (.getMessage) (println "Invalid argument: ")))
     (finally (shutdown-agents))))
-
-;(->> (file->points filename)
-;           (map println)
-;           (dorun))
 
 ;(-main "euclidean" "./samples/glass.txt")
