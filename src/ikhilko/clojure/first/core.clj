@@ -2,9 +2,6 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]))
 
-; TODO marco from intenet, remove it later
-(defmacro dbg [x] `(let [x# ~x] (println "dbg:" '~x "=" x#) x#))
-
 ; define algorithm constants
 (def ^:private r-a 3)
 (def ^:private alpha (/ 4 (Math/pow r-a 2)))
@@ -159,8 +156,8 @@
   [distance-type filename]
   (dorun
     (map #(apply if-false-throw-error %)
-         [[(some? distance-type) "Distance-type must be provided as first argument"]
-          [(some? filename) "Distance-type must be provided as second argument"]
+         [[(not (str/blank? distance-type)) "Not blank \"distance-type\" must be provided as first argument"]
+          [(not (str/blank? filename)) "Not blank \"filename\" must be provided as second argument"]
           [(contains? distance-types distance-type) (str "Unknown distance type: \"" distance-type "\", please use "
                                                          (->> distance-types (map #(str "\"" % "\"")) (str/join " or ")))]
           [(file-exist? filename) (str "File with name " filename " doesn't exist!")]])))
@@ -181,5 +178,3 @@
                (dorun))))
     (catch IllegalArgumentException e (->> e (.getMessage) (println "Invalid argument:")))
     (finally (shutdown-agents))))
-
-;(-main "euclidean" "./samples/glass.txt")

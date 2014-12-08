@@ -1,14 +1,18 @@
-# lab-first
-
-A Clojure library designed to ... well, that part is up to you.
+Cluster estimation algorithm on Clojure
 
 ## Usage
 
-FIXME
+    $ lein run <distance-type> <path-to-file>
 
-## License
+    Supported distance types:
+      
+      * euclidean
+      * hamming
 
-Copyright © 2014 FIXME
+## Specs
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+    $ lein test
+    
+## Links
+ 
+ [Algorithm description](https://www.google.by/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0CCAQFjAA&url=http%3A%2F%2Fmilling-optimization.googlecode.com%2Fsvn%2Ftrunk%2FPDF%2FFuzzy%2520Model%2520Identification%2520Based%2520on%2520Cluster%2520Estimation.pdf&ei=9vmEVJLTCovwUou2gNgP&usg=AFQjCNFqdypVgIVAFRrWiDYNfyKyXut7jA&sig2=8kTxCSDQ0QPkQZeZE_bBrA)
