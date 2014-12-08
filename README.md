@@ -2,16 +2,20 @@ Cluster estimation algorithm on Clojure
 
 ## Usage
 
-    $ lein run <distance-type> <path-to-file>
-
+    $> lein run <distance-type> <path-to-file>
+    
     Supported distance types:
-      
-      * euclidean
-      * hamming
+          
+          * euclidean
+          * hamming
+    
+    e.g.
+    
+    $> lein run "euclidean" "./samples/irises.txt"   
 
 ## Specs
 
-    $ lein test
+    $> lein test
     
 ## Links
  
