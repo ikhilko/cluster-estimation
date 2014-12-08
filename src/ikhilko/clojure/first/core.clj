@@ -14,6 +14,22 @@
 (def ^:private e_max 0.5)
 (def ^:private e_min 0.15)
 
+; helper, like regular reduce but add index param
+(defn reduce-indexed
+  "Reduce while adding an index as the second argument to the function"
+  ([f coll]
+    (reduce-indexed f (first coll) 0 (rest coll)))
+
+  ([f init coll]
+    (reduce-indexed f init 0 coll))
+
+  ([f init i coll]
+    (if (empty? coll)
+      init
+      (let [v (first coll)
+            fv (f init i v)]
+        (recur f fv (inc i) (rest coll))))))
+
 (defn- calc-exponent
   [param distance]
   (Math/exp (- (* param distance))))
@@ -92,15 +108,21 @@
                        first-kernel
                        (conj kernels (find-max-potential-point revised-points)))))))))))
 
+(defn- sqr [x] (* x x))
+
 (defn- euclidean-distance
   [point1 point2]
-  (->> (map (comp (fn [x] (* x x)) -) point1 point2)
-       (reduce + 0)))
+  (reduce-indexed (fn [memo i value]
+                    (+ memo (sqr (- value (get point2 i)))))
+                  0 point1))
 
 (defn- hamming-distance
   [point1 point2]
-  (->> (map not= point1 point2)
-       (reduce #(if (true? %2) (inc %1) %1) 0)))
+  (reduce-indexed (fn [memo i value]
+                    (if (not= value (get point2 i))
+                      (inc memo)
+                      memo))
+                  0 point1))
 
 (defn- get-distance-func
   [distance-type]
@@ -109,18 +131,18 @@
 
 ; string to hash-map (excluded last value in line)
 (defn- line->point
-  [line]
+  [i line]
   (->> (str/split line #",")
        (butlast)
        (reduce #(conj %1 (Double/parseDouble (str/trim %2))) [])
-       (hash-map :vals)))
+       (hash-map :index (inc i) :vals)))
 
 ; read file to list of hash-maps
 (defn- file->points
   [filename]
   (->> (io/reader filename)
        (line-seq)
-       (map line->point)))
+       (reduce-indexed #(if (not (str/blank? %3)) (conj %1 (line->point %2 %3)) %1) [])))
 
 ; check, is file exist?
 (defn- file-exist? [filename]
@@ -148,16 +170,16 @@
   [distance-type filename]
   (try
     (do (check-argumets distance-type filename)             ; if invalid will throw an IllegalArgumentException that catched below
-        (println "Distance type: " distance-type)
-        (println "Source file: " filename)
+        (println "Distance type:" distance-type)
+        (println "Source file:" filename)
         (let [points (file->points filename)
               distance-func (get-distance-func distance-type)
               kernels (clusterize distance-func points)]
           (println "Kernels finded: " (count kernels))
           (->> kernels
-               (map println)
+               (map #(printf "line: %3d, potential: %.4f, data: %s \n" (:index %) (:potential %) (:vals %)))
                (dorun))))
-    (catch IllegalArgumentException e (->> e (.getMessage) (println "Invalid argument: ")))
+    (catch IllegalArgumentException e (->> e (.getMessage) (println "Invalid argument:")))
     (finally (shutdown-agents))))
 
 ;(-main "euclidean" "./samples/glass.txt")
