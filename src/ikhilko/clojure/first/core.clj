@@ -20,14 +20,17 @@
 
 (defn- set-point-potential
   [distance-func points point]
-  (->> (pmap #(distance-func (:vals point) (:vals %)) points)
-       (pmap (partial calc-exponent alpha))
-       (reduce + 0)
+  (->> (reduce
+         (fn [memo another-point]
+           (+ memo (->> (distance-func (:vals point)
+                                       (:vals another-point))
+                        (calc-exponent alpha))))
+         0 points)
        (assoc point :potential)))
 
 (defn- set-points-potentials
   [distance-func points]
-  (pmap (partial set-point-potential distance-func points) points))
+  (map (partial set-point-potential distance-func points) points))
 
 (defn- revise-point-potential
   [distance-func kernel point]
@@ -39,7 +42,7 @@
 
 (defn- revise-points-potentials
   [distance-func kernel points]
-  (->> (pmap (partial revise-point-potential distance-func kernel) points)
+  (->> (map (partial revise-point-potential distance-func kernel) points)
        (sort-by :potential >)))
 
 (defn- find-max-potential-point
@@ -49,8 +52,11 @@
 
 (defn- find-shortest-distance
   [distance-func kernel kernels]
-  (->> (pmap #(distance-func (:vals kernel) (:vals %)) kernels)
-       (apply min)))
+  (reduce
+    (fn [memo another-kernel]
+      (min memo (distance-func (:vals kernel)
+                               (:vals another-kernel))))
+    Double/POSITIVE_INFINITY kernels))
 
 ; entry point of Cluster Estimation algorithm
 (defn- clusterize
@@ -63,7 +69,7 @@
                   first-kernel
                   [first-kernel])))
   ([distance-func points first-kernel kernels]
-    (let [revised-points (revise-points-potentials distance-func (last kernels) points)
+    (let [revised-points (revise-points-potentials distance-func ((comp first reverse) kernels) points)
           next-kernel (first revised-points)
           first-potential (:potential first-kernel)
           next-potential (:potential next-kernel)]
@@ -74,30 +80,27 @@
                (conj kernels next-kernel))
         (if (< next-potential (* first-potential e_min))
           kernels
-          (if (>= (->> (map /
-                            [(find-shortest-distance distance-func next-kernel kernels) next-potential]
-                            [r-a first-potential])
-                       (reduce +)), 1)
-            (recur distance-func
-                   revised-points
-                   first-kernel
-                   (conj kernels next-kernel))
-            (let [revised-points (rest revised-points)]
+          (let [shortest-distance (find-shortest-distance distance-func next-kernel kernels)]
+            (if (<= 1 (+ (/ shortest-distance r-a) (/ next-potential first-potential)))
               (recur distance-func
-                     (conj revised-points (assoc next-kernel :potential 0))
+                     revised-points
                      first-kernel
-                     (conj kernels (find-max-potential-point revised-points))))))))))
+                     (conj kernels next-kernel))
+              (let [revised-points (rest revised-points)]
+                (recur distance-func
+                       (conj revised-points (assoc next-kernel :potential 0))
+                       first-kernel
+                       (conj kernels (find-max-potential-point revised-points)))))))))))
 
 (defn- euclidean-distance
   [point1 point2]
-  (->> (pmap (comp (fn [x] (* x x)) -) point1 point2)
+  (->> (map (comp (fn [x] (* x x)) -) point1 point2)
        (reduce + 0)))
 
 (defn- hamming-distance
   [point1 point2]
-  (->> (pmap not= point1 point2)
-       (filter true?)
-       (count)))
+  (->> (map not= point1 point2)
+       (reduce #(if (true? %2) (inc %1) %1) 0)))
 
 (defn- get-distance-func
   [distance-type]
@@ -108,10 +111,8 @@
 (defn- line->point
   [line]
   (->> (str/split line #",")
-       (pmap str/trim)
        (butlast)
-       (pmap #(Double/parseDouble %))
-       (vec)
+       (reduce #(conj %1 (Double/parseDouble (str/trim %2))) [])
        (hash-map :vals)))
 
 ; read file to list of hash-maps
@@ -119,7 +120,7 @@
   [filename]
   (->> (io/reader filename)
        (line-seq)
-       (pmap line->point)))
+       (map line->point)))
 
 ; check, is file exist?
 (defn- file-exist? [filename]
@@ -139,7 +140,7 @@
          [[(some? distance-type) "Distance-type must be provided as first argument"]
           [(some? filename) "Distance-type must be provided as second argument"]
           [(contains? distance-types distance-type) (str "Unknown distance type: \"" distance-type "\", please use "
-                                                         (->> distance-types (pmap #(str "\"" % "\"")) (str/join " or ")))]
+                                                         (->> distance-types (map #(str "\"" % "\"")) (str/join " or ")))]
           [(file-exist? filename) (str "File with name " filename " doesn't exist!")]])))
 
 ; entry point
@@ -150,8 +151,10 @@
         (println "Distance type: " distance-type)
         (println "Source file: " filename)
         (let [points (file->points filename)
-              distance-func (get-distance-func distance-type)]
-          (->> (clusterize distance-func points)
+              distance-func (get-distance-func distance-type)
+              kernels (clusterize distance-func points)]
+          (println "Kernels finded: " (count kernels))
+          (->> kernels
                (map println)
                (dorun))))
     (catch IllegalArgumentException e (->> e (.getMessage) (println "Invalid argument: ")))
