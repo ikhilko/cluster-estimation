@@ -86,24 +86,23 @@
           next-kernel (first revised-points)
           first-potential (:potential first-kernel)
           next-potential (:potential next-kernel)]
-      (if (> next-potential (* first-potential e_max))
-        (recur distance-func
-               revised-points
-               first-kernel
-               (conj kernels next-kernel))
-        (if (< next-potential (* first-potential e_min))
-          kernels
-          (let [shortest-distance (find-shortest-distance distance-func next-kernel kernels)]
-            (if (<= 1 (+ (/ shortest-distance r-a) (/ next-potential first-potential)))
-              (recur distance-func
-                     revised-points
-                     first-kernel
-                     (conj kernels next-kernel))
-              (let [revised-points (rest revised-points)]
-                (recur distance-func
-                       (conj revised-points (assoc next-kernel :potential 0))
-                       first-kernel
-                       (conj kernels (find-max-potential-point revised-points)))))))))))
+      (cond
+        (> next-potential (* first-potential e_max)) (recur distance-func
+                                                            revised-points
+                                                            first-kernel
+                                                            (conj kernels next-kernel))
+        (< next-potential (* first-potential e_min)) kernels
+        :else (let [shortest-distance (find-shortest-distance distance-func next-kernel kernels)]
+                (if (<= 1 (+ (/ shortest-distance r-a) (/ next-potential first-potential)))
+                  (recur distance-func
+                         revised-points
+                         first-kernel
+                         (conj kernels next-kernel))
+                  (let [revised-points (rest revised-points)]
+                    (recur distance-func
+                           (conj revised-points (assoc next-kernel :potential 0))
+                           first-kernel
+                           (conj kernels (find-max-potential-point revised-points))))))))))
 
 (defn- sqr [x] (* x x))
 
